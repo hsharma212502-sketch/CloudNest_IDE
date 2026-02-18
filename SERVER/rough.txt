@@ -1,0 +1,1025 @@
+const http =require('http');
+const express =require('express');
+const {Server: SocketServer} =require('socket.io');
+
+const os = require("os");
+const pty = require("node-pty");
+
+const shell = os.platform() === "win32"
+  ? "powershell.exe"
+  : "/bin/bash";
+
+const ptyProcess = pty.spawn(shell, [], {
+  name: "xterm-color",
+  cols: 80,
+  rows: 30,
+  cwd: process.env.INIT_CWD + '/User',
+  env: process.env
+});
+
+
+const app = express();
+const server = http.createServer(app);
+const io = new SocketServer({
+    cors: "*"
+})
+io.attach(server);
+
+ptyProcess.onData(data=>{
+    io.emit('terminal:data',data)
+})
+
+io.on('connection',(socket)=>{
+    console.log(`Socket connected`,socket.id)
+    socket.on('terminal:write',(data)=>{
+        ptyProcess.write(data);
+    })
+})
+
+server.listen(9000,()=>console.log(`🐳Docker server running on port 9000`))
+
+
+
+
+
+const http = require("http");
+const express = require("express");
+const { Server: SocketServer } = require("socket.io");
+const os = require("os");
+const path = require("path");
+const pty = require("node-pty");
+const fs = require("fs/promises");
+
+
+const shell =
+  os.platform() === "win32"
+    ? "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    : "/bin/bash";
+
+const cwd =
+  os.platform() === "win32"
+    ? process.env.USERPROFILE
+    : process.env.HOME;
+
+const ptyProcess = pty.spawn(shell, [], {
+  name: "xterm-color",
+  cols: 80,
+  rows: 30,
+  cwd,
+  env: process.env
+});
+
+const app = express();
+const server = http.createServer(app);
+
+const io = new SocketServer(server, {
+  cors: {
+    origin: "*"
+  }
+});
+
+ptyProcess.onData(data => {
+  io.emit("terminal:data", data);
+});
+
+io.on("connection", socket => {
+  console.log("Socket connected", socket.id);
+
+  socket.on("terminal:write", data => {
+    ptyProcess.write(data);
+  });
+});
+
+app.get('/files', async (req, res)=>{
+    const fileTree = await generateFileTree('./User');
+    return res.json({tree: fileTree})
+})
+
+server.listen(9000, () =>
+  console.log("🖥️ Terminal server running on port 9000")
+);
+function generateFileTree(directory){
+    const tree={}
+
+    function buildTree(currentDir, currentTree){
+        const files = await fs.readdir(currentDir)
+        for (const file of files){
+            const filePath = path.join(currentDir, file)
+            const stat =fs.start(filePath)
+
+            if (stat.isDirectory()){
+               currentTree[file] = {}
+               buildTree(filePath, currentTree[file])
+            }else{
+                currentTree[file] = null
+            }
+        }
+    }
+
+    buildTree(directory, tree);
+    return tree
+
+}
+
+
+
+
+
+
+
+import { useState } from 'react';
+import './App.css'
+import Terminal from './components/terminal';
+import "@xterm/xterm/css/xterm.css";
+import { useEffect } from 'react';
+
+
+function App() {
+    const [FileTree, setFileTree] = useState({})
+
+    const getFileTree=async()=>{
+        const response =awaitfetch('http://localhost:9000/files')
+        const result = await response.json();
+        setFileTree(result.tree);
+    };
+    useEffect(()=> {
+        getFileTree()
+    },[]);
+  
+    return( 
+    <div className="playground-container">
+    <div className="files"></div>
+    <div className="editor"></div>
+    <FileTree tree={fileTree} />
+         <div className="editor-container"></div>
+         <div className="terminal-container">  
+            <Terminal />
+        </div>
+
+
+    </div>
+    );
+  
+}
+
+export default App
+
+
+
+
+
+const FileTreeNode =({filename,nodes})=>{
+    return(
+        <div>
+        {filename}
+        {nodes && <ul>
+            {Object.keys(nodes).map(child=>{
+                <li>
+                    <FileTreeNode
+                    filename={child}
+                    nodes ={nodes[child]}
+                    />
+                </li>
+            })}
+        </ul>}
+        
+        </div>
+    )
+}
+
+
+const FileTree =()=>{
+    return(
+<FileTreeNode
+filename="/"
+nodes={tree}
+/>
+    )
+};
+export default FileTree;
+
+
+
+
+
+import { useState, useEffect } from 'react';
+import "./App.css";
+import Terminal from './components/terminal';
+import FileTree from '../src/components/Tree';
+import "@xterm/xterm/css/xterm.css";
+
+function App() {
+  const [fileTree, setFileTree] = useState({});
+
+  const getFileTree = async () => {
+    const response = await fetch('http://localhost:9000/files');
+    const result = await response.json();
+    setFileTree(result.tree);
+  };
+
+  useEffect(() => {
+    getFileTree();
+  }, []);
+
+  return (
+    <div className="playground-container">
+      <div className="files">
+        <FileTree tree={fileTree} />
+      </div>
+
+      <div className="editor-container">
+        <div className="editor"></div>
+      </div>
+
+      <div className="terminal-container">
+        <Terminal />
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+const http = require("http");
+const express = require("express");
+const { Server: SocketServer } = require("socket.io");
+const os = require("os");
+const path = require("path");
+const cors = require("cors");
+
+const pty = require("node-pty");
+const fs = require("fs/promises");
+
+const shell =
+  os.platform() === "win32"
+    ? "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    : "/bin/bash";
+
+const cwd =
+  os.platform() === "win32"
+    ? process.env.USERPROFILE
+    : process.env.HOME;
+
+const USER_DIR = path.join(cwd, "User");
+
+const ptyProcess = pty.spawn(shell, [], {
+  name: "xterm-color",
+  cols: 80,
+  rows: 30,
+  cwd,
+  env: process.env
+});
+
+const app = express();
+const server = http.createServer(app);
+
+
+const io = new SocketServer(server, {
+  cors: { origin: "*" }
+});
+
+app.use(cors())
+
+ptyProcess.onData(data => {
+  io.emit("terminal:data", data);
+});
+
+io.on("connection", socket => {
+  console.log("Socket connected", socket.id);
+
+  socket.on("terminal:write", data => {
+    ptyProcess.write(data);
+  });
+});
+
+app.get("/files", async (req, res) => {
+  try {
+    const tree = await generateFileTree(USER_DIR);
+    res.json({ tree });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+server.listen(9000, () =>
+  console.log("🖥️ Terminal server running on port 9000")
+);
+
+async function generateFileTree(directory) {
+  const tree = {};
+
+  async function buildTree(currentDir, currentTree) {
+    const files = await fs.readdir(currentDir);
+
+    for (const file of files) {
+      const filePath = path.join(currentDir, file);
+      const stat = await fs.stat(filePath);
+
+      if (stat.isDirectory()) {
+        currentTree[file] = {};
+        await buildTree(filePath, currentTree[file]);
+      } else {
+        currentTree[file] = null;
+      }
+    }
+  }
+
+  await buildTree(directory, tree);
+  return tree;
+}
+
+
+
+
+
+
+
+const FileTreeNode = ({ filename, nodes }) => {
+  return (
+    <div style={{ marginLeft: "12px" }}>
+      📄 {filename}
+
+      {nodes && (
+        <ul>
+          {Object.keys(nodes).map((child) => (
+            <li key={child}>
+              <FileTreeNode
+                filename={child}
+                nodes={nodes[child]}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const FileTree = ({ Tree }) => {
+  return (
+    <FileTreeNode
+      filename="/"
+      nodes={Tree}
+    />
+  );
+};
+
+export default FileTree;
+
+
+
+
+
+
+const http = require("http");
+const express = require("express");
+const { Server: SocketServer } = require("socket.io");
+const os = require("os");
+const path = require("path");
+const cors = require("cors");
+
+const pty = require("node-pty");
+const fs = require("fs/promises");
+const chokidar = require("chokidar");
+
+/* --------------------------------------------------
+   SHELL & WORKING DIRECTORY
+-------------------------------------------------- */
+
+const shell =
+  os.platform() === "win32"
+    ? "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    : "/bin/bash";
+
+const cwd =
+  os.platform() === "win32"
+    ? process.env.USERPROFILE
+    : process.env.HOME;
+
+/* --------------------------------------------------
+   PROJECT ROOT FOR FILE TREE
+   👉 SERVER/User
+-------------------------------------------------- */
+
+const USER_DIR = path.join(__dirname, "User");
+
+/* --------------------------------------------------
+   EXPRESS & SOCKET SERVER
+-------------------------------------------------- */
+
+const app = express();
+const server = http.createServer(app);
+
+app.use(cors());
+
+const io = new SocketServer(server, {
+  cors: { origin: "*" }
+});
+
+
+chokidar.watch('./User').on('all', (event, path) => {
+  io.emit('file:refresh', path)
+  console.log(event, path);
+});
+/* --------------------------------------------------
+   TERMINAL (node-pty) — ONE PER SOCKET
+-------------------------------------------------- */
+
+io.on("connection", socket => {
+  console.log("🔌 Socket connected:", socket.id);
+
+  const ptyProcess = pty.spawn(shell, [], {
+    name: "xterm-color",
+    cols: 80,
+    rows: 30,
+    cwd,
+    env: process.env
+  });
+
+  ptyProcess.onData(data => {
+    socket.emit("terminal:data", data);
+  });
+
+  socket.on("terminal:write", data => {
+    ptyProcess.write(data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("❌ Socket disconnected:", socket.id);
+    ptyProcess.kill();
+  });
+});
+
+/* --------------------------------------------------
+   FILE TREE API
+-------------------------------------------------- */
+
+app.get("/files", async (req, res) => {
+  try {
+    const tree = await generateFileTree(USER_DIR);
+    res.json({ tree });
+  } catch (err) {
+    console.error("❌ File tree error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* --------------------------------------------------
+   SAFE FILE TREE GENERATOR
+-------------------------------------------------- */
+
+async function generateFileTree(directory, maxDepth = 5) {
+  const tree = {};
+
+  const IGNORE = ["node_modules", ".git"];
+
+  async function buildTree(currentDir, currentTree, depth) {
+    if (depth > maxDepth) return;
+
+    let files = [];
+    try {
+      files = await fs.readdir(currentDir);
+    } catch {
+      return; // permission denied
+    }
+
+    for (const file of files) {
+      if (IGNORE.includes(file)) continue;
+
+      const filePath = path.join(currentDir, file);
+
+      let stat;
+      try {
+        stat = await fs.stat(filePath);
+      } catch {
+        continue;
+      }
+
+      if (stat.isDirectory()) {
+        currentTree[file] = {};
+        await buildTree(filePath, currentTree[file], depth + 1);
+      } else {
+        currentTree[file] = null;
+      }
+    }
+  }
+
+  await buildTree(directory, tree, 0);
+  return tree;
+}
+
+/* --------------------------------------------------
+   START SERVER
+-------------------------------------------------- */
+
+server.listen(9000, () => {
+  console.log("🖥️ Backend running at http://localhost:9000");
+  console.log("📁 Reading files from:", USER_DIR);
+});
+
+
+
+
+
+const http = require("http");
+const express = require("express");
+const { Server: SocketServer } = require("socket.io");
+const os = require("os");
+const path = require("path");
+const cors = require("cors");
+const pty = require("node-pty");
+const fs = require("fs/promises");
+
+/* --------------------------------------------------
+   SHELL (POWERSHELL)
+-------------------------------------------------- */
+
+const shell =
+  os.platform() === "win32"
+    ? "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    : "/bin/bash";
+
+/* --------------------------------------------------
+   PROJECT ROOT (IMPORTANT)
+   👉 SERVER/User
+-------------------------------------------------- */
+
+const USER_DIR = path.join(__dirname, "User");
+
+/* --------------------------------------------------
+   EXPRESS + SOCKET SETUP
+-------------------------------------------------- */
+
+const app = express();
+const server = http.createServer(app);
+
+app.use(cors());
+
+const io = new SocketServer(server, {
+  cors: { origin: "*" }
+});
+
+/* --------------------------------------------------
+   TERMINAL (node-pty)
+-------------------------------------------------- */
+
+io.on("connection", (socket) => {
+  console.log("🔌 Terminal connected:", socket.id);
+
+  const ptyProcess = pty.spawn(shell, [], {
+    name: "xterm-color",
+    cols: 80,
+    rows: 30,
+    cwd: USER_DIR, // ⭐ THIS IS THE KEY LINE
+    env: process.env
+  });
+
+  // Send terminal output to frontend
+  ptyProcess.onData((data) => {
+    socket.emit("terminal:data", data);
+  });
+
+  // Receive keystrokes from frontend
+  socket.on("terminal:write", (data) => {
+    ptyProcess.write(data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("❌ Terminal disconnected:", socket.id);
+    ptyProcess.kill();
+  });
+});
+
+/* --------------------------------------------------
+   FILE TREE API
+-------------------------------------------------- */
+
+app.get("/files", async (req, res) => {
+  try {
+    const tree = await generateFileTree(USER_DIR);
+    res.json({ tree });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* --------------------------------------------------
+   SAFE FILE TREE BUILDER
+-------------------------------------------------- */
+
+async function generateFileTree(directory, maxDepth = 5) {
+  const tree = {};
+  const IGNORE = ["node_modules", ".git"];
+
+  async function buildTree(dir, node, depth) {
+    if (depth > maxDepth) return;
+
+    let files;
+    try {
+      files = await fs.readdir(dir);
+    } catch {
+      return;
+    }
+
+    for (const file of files) {
+      if (IGNORE.includes(file)) continue;
+
+      const filePath = path.join(dir, file);
+      let stat;
+
+      try {
+        stat = await fs.stat(filePath);
+      } catch {
+        continue;
+      }
+
+      if (stat.isDirectory()) {
+        node[file] = {};
+        await buildTree(filePath, node[file], depth + 1);
+      } else {
+        node[file] = null;
+      }
+    }
+  }
+
+  await buildTree(directory, tree, 0);
+  return tree;
+}
+
+/* --------------------------------------------------
+   START SERVER
+-------------------------------------------------- */
+
+server.listen(9000, () => {
+  console.log("🖥️ Backend running at http://localhost:9000");
+  console.log("📁 Project root:", USER_DIR);
+});
+
+
+
+
+const FileTreeNode = ({ filename, nodes }) => {
+  const isDir = !!nodes
+  return (
+    <div onClick={(e)=>{
+       e.stopPropagation()
+       if(!isDir)return;
+       onSelect(path)
+
+    }};
+    <div style={{ marginLeft: "20px" }}>
+      📄 {filename}
+
+      {nodes && (
+        <ul>
+          {Object.keys(nodes).map((child) => (
+            <li key={child}>
+              <FileTreeNode
+              path={path + '/' + child}
+                filename={child}
+                nodes={nodes[child]}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const FileTree = ({ tree, onSelect }) => {
+  return (
+    <FileTreeNode
+      onSelect={onSelect}
+      filename="/"
+      path=""
+      nodes={tree}
+    />
+  );
+};
+
+export default FileTree;
+
+
+
+
+//app.css
+/* MAIN LAYOUT */
+.playground-container {
+  display: flex;
+  flex-direction: row;        /* 🔥 horizontal layout */
+  height: 100vh;
+}
+
+/* FILE TREE */
+.files {
+  width: 250px;
+  padding: 12px;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+/* EDITOR */
+.editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* BREADCRUMB */
+.editor-path {
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+
+  white-space: nowrap;      /* 🔥 force single line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* TERMINAL */
+.terminal-container {
+  height: 30vh;
+  border-top: 1px solid #ddd;
+}
+
+/* FILE TREE LIST */
+ul {
+  padding-left: 12px;
+}
+
+li {
+  list-style: none;          /* ✅ correct value */
+  line-height: 24px;
+  cursor: pointer;
+}
+
+
+
+
+tree.jsx
+
+
+
+const FileTreeNode = ({ filename, nodes, path, onSelect }) => {
+  const isDir = nodes !== null;
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    // ✅ allow both folder & file selection
+    onSelect(path, isDir);
+  };
+
+  return (
+    <div style={{ marginLeft: "20px" }} onClick={handleClick}>
+      <span>
+        {isDir ? "📁" : "📄"} {filename}
+      </span>
+
+      {isDir && (
+        <ul style={{ listStyle: "none", paddingLeft: "16px" }}>
+          {Object.keys(nodes).map((child) => (
+            <li key={child}>
+              <FileTreeNode
+                filename={child}
+                nodes={nodes[child]}
+                path={`${path}/${child}`}
+                onSelect={onSelect}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const FileTree = ({ tree, onSelect }) => {
+  return (
+    <FileTreeNode
+      filename="/"
+      nodes={tree}
+      path=""
+      onSelect={onSelect}
+    />
+  );
+};
+
+export default FileTree;
+
+
+
+
+
+
+
+
+
+
+
+
+
+app.jsx
+
+
+
+
+
+import { useState, useEffect } from "react";
+import "./App.css";
+import Terminal from "./components/terminal";
+import FileTree from "./components/Tree";
+import "@xterm/xterm/css/xterm.css";
+import socket from "./socket";
+import AceEditor from "react-ace";
+
+// Ace modes & themes
+import "ace-builds/src-noconflict/mode-javascript";
+import "ace-builds/src-noconflict/theme-github";
+import "ace-builds/src-noconflict/ext-language_tools";
+
+function App() {
+  const [fileTree, setFileTree] = useState({});
+  const [code, setCode] = useState("");
+  const [activePath, setActivePath] = useState("");
+  const [isFileOpen, setIsFileOpen] = useState(false);
+
+  /* ---------------- FILE TREE ---------------- */
+
+  const getFileTree = async () => {
+    try {
+      const response = await fetch("http://localhost:9000/files");
+      const result = await response.json();
+      setFileTree(result.tree);
+    } catch (err) {
+      console.error("Failed to fetch file tree:", err);
+    }
+  };
+
+  useEffect(() => {
+    getFileTree();
+  }, []);
+
+  useEffect(() => {
+    socket.on("file:refresh", getFileTree);
+    return () => socket.off("file:refresh", getFileTree);
+  }, []);
+
+  /* ---------------- OPEN FILE / FOLDER ---------------- */
+
+  const onSelect = async (path, isDir) => {
+    setActivePath(path);
+
+    // 📁 Folder → no editor load
+    if (isDir) {
+      setIsFileOpen(false);
+      return;
+    }
+
+    // 📄 File → load content
+    try {
+      const res = await fetch(
+        `http://localhost:9000/file?path=${encodeURIComponent(path)}`
+      );
+      const data = await res.json();
+      setCode(data.content || "");
+      setIsFileOpen(true);
+    } catch (err) {
+      console.error("Failed to open file:", err);
+    }
+  };
+
+  /* ---------------- AUTOSAVE (DEBOUNCED) ---------------- */
+
+  useEffect(() => {
+    if (!isFileOpen || !activePath) return;
+
+    const timer = setTimeout(() => {
+      socket.emit("file:change", {
+        path: activePath,
+        content: code,
+      });
+    }, 5000); // 5 seconds debounce
+
+    return () => clearTimeout(timer);
+  }, [code, activePath, isFileOpen]);
+
+  return (
+    <div className="playground-container">
+      {/* FILE TREE */}
+      <div className="files">
+        <FileTree tree={fileTree} onSelect={onSelect} activePath={activePath} />
+      </div>
+
+      {/* EDITOR */}
+      <div className="editor-container">
+        {/* Breadcrumb */}
+        <div className="editor-path">
+          {activePath
+            ? activePath.replace(/^\//, "").split("/").join(" > ")
+            : "No file selected"}
+        </div>
+
+        <AceEditor
+          mode="javascript"
+          theme="github"
+          value={code}
+          onChange={setCode}
+          name="code-editor"
+          width="100%"
+          height="100%"
+          fontSize={14}
+          setOptions={{
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            enableSnippets: true,
+            showLineNumbers: true,
+            tabSize: 2,
+          }}
+        />
+      </div>
+
+      {/* TERMINAL */}
+      <div className="terminal-container">
+        <Terminal />
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+
+app.css
+
+
+
+
+
+
+
+
+/* MAIN LAYOUT */
+.playground-container {
+  display: flex;
+  flex-direction: row;        /* 🔥 horizontal layout */
+  height: 100vh;
+}
+
+/* FILE TREE */
+.files {
+  width: 250px;
+  padding: 12px;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+/* EDITOR */
+.editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* BREADCRUMB */
+.editor-path {
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+
+  white-space: nowrap;      /* 🔥 force single line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* TERMINAL */
+.terminal-container {
+  height: 30vh;
+  border-top: 1px solid #ddd;
+}
+
+/* FILE TREE LIST */
+ul {
+  padding-left: 12px;
+}
+
+li {
+  list-style: none;          /* ✅ correct value */
+  line-height: 24px;
+  cursor: pointer;
+}
+

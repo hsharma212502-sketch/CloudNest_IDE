@@ -1,0 +1,66 @@
+
+.playground-container {
+  display: flex;
+  height: 100vh;
+  background: #1e1e1e;
+  color: #ddd;
+  font-family: "Segoe UI", sans-serif;
+}
+
+
+.files {
+  width: 250px;
+  padding: 12px;
+  background: #252526;
+  border-right: 1px solid #333;
+  overflow-y: auto;
+}
+
+
+.right-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.editor-path {
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ccc;
+}
+
+
+.ace_editor {
+  flex: 1 !important;
+}
+
+
+.terminal-container {
+  height: 30vh;
+  background: #111;
+  border-top: 1px solid #333;
+}
+
+
+ul {
+  padding-left: 12px;
+}
+
+li {
+  list-style: none;
+  line-height: 24px;
+  cursor: pointer;
+}
