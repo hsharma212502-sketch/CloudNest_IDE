@@ -13,6 +13,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "cat-names": "^4.0.0",
+    "express": "^5.2.1",
+    "python": "^0.0.4"
   }
 }
